@@ -130,7 +130,3 @@ Standard Dataset Testing: Running accuracy benchmarks against public intrusion d
 
 Automated Mitigation: Implementing dynamic firewall rule insertion (Windows Filtering Platform / iptables) upon high-confidence anomaly triggers.
 
-
----
-   ```powershell
-   notepad README.md

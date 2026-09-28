@@ -1,11 +1,11 @@
 import sys
 import time
 import os
-import json
 import asyncio
 import joblib
 import pandas as pd
 from typing import List
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from scapy.all import sniff, IP, TCP, UDP, get_working_if, IFACES
@@ -14,18 +14,10 @@ MODEL_FILE = "ids_isolation_forest.joblib"
 SCALER_FILE = "ids_scaler.joblib"
 WINDOW_SIZE_SECONDS = 5
 
-app = FastAPI(title="Network IDS Streaming API")
+# Global ML objects
+model = None
+scaler = None
 
-# Enable CORS for local dashboard integration
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Active WebSocket connections manager
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -51,10 +43,6 @@ class ConnectionManager:
             self.disconnect(connection)
 
 manager = ConnectionManager()
-
-# Global IDS state
-model = None
-scaler = None
 
 def load_ml_artifacts():
     global model, scaler
@@ -123,7 +111,7 @@ class AsyncIDSEngine:
         ]], columns=feature_names)
 
         scaled_features = scaler.transform(raw_features)
-        prediction = model.predict(scaled_features)[0]  # 1 for normal, -1 for anomaly
+        prediction = model.predict(scaled_features)[0]
         anomaly_score = float(model.decision_function(scaled_features)[0])
 
         payload = {
@@ -142,15 +130,14 @@ class AsyncIDSEngine:
             }
         }
 
-        # Schedule async broadcast from thread
         asyncio.run_coroutine_threadsafe(manager.broadcast(payload), self.loop)
 
-@app.on_event("startup")
-async def startup_event():
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Startup logic
     load_ml_artifacts()
     loop = asyncio.get_running_loop()
 
-    # Search for active Wi-Fi / Wireless interface
     active_iface = None
     for iface in IFACES.values():
         name_lower = iface.name.lower()
@@ -161,10 +148,21 @@ async def startup_event():
         active_iface = get_working_if()
 
     engine = AsyncIDSEngine(loop=loop, window_size=WINDOW_SIZE_SECONDS)
-
-    # Run packet sniffer in background thread
     loop.run_in_executor(None, lambda: sniff(iface=active_iface, prn=engine.process_packet, store=False))
     print(f"[*] Background packet sniffer started on: {active_iface.name}")
+    yield
+    # Shutdown logic
+    print("[*] Server shutting down.")
+
+app = FastAPI(title="Network IDS Streaming API", lifespan=lifespan)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 @app.get("/")
 def health_check():
@@ -175,7 +173,7 @@ async def websocket_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
-            await websocket.receive_text()  # Keep connection open
+            await websocket.receive_text()
     except WebSocketDisconnect:
         manager.disconnect(websocket)
 

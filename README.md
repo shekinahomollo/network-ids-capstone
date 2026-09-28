@@ -132,9 +132,5 @@ Automated Mitigation: Implementing dynamic firewall rule insertion (Windows Filt
 
 
 ---
-
-### How to Save & Push to GitHub
-
-1. Run this in PowerShell to open Notepad:
    ```powershell
    notepad README.md

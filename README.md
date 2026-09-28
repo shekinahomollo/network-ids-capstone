@@ -7,7 +7,7 @@ Designed as a 7-month Computer Science Capstone Project focusing on low-overhead
 ---
 
 ## 📐 System Architecture
-+-----------------------------------+
+                   +-----------------------------------+
                    |      Live Network Interface       |
                    |       (Wi-Fi / Ethernet)          |
                    +-----------------+-----------------+

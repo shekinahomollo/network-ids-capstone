@@ -1,115 +1,69 @@
-```markdown
+<div align="center">
+
 # 🛡️ Real-Time Machine Learning Network Intrusion Detection System (NIDS)
 
-An offline-first, low-latency Network Intrusion Detection System (NIDS) engineered for high-throughput packet processing, sliding-window feature engineering, unsupervised anomaly detection using **Isolation Forests**, and real-time alert streaming via **WebSockets** and **FastAPI**.
+**An offline-first, low-latency NIDS leveraging unsupervised Isolation Forests, FastAPI WebSockets, and real-time telemetry visualizers.**
 
-Designed as a Computer Science Capstone Project focusing on low-overhead security monitoring, resilience against zero-day network threats, and zero cloud-API cost dependencies.
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.100%2B-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![Scikit-Learn](https://img.shields.io/badge/scikit--learn-F7931E?style=for-the-badge&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
+[![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-38B2AC?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge)](LICENSE)
+
+</div>
+
+---
+
+## 📌 Executive Overview
+
+This repository contains a **Computer Science Capstone Project** centered on low-overhead security monitoring, zero-day threat resilience, and zero cloud-API cost dependencies. 
+
+The system intercepts live network packets at Layer 2/3, aggregates time-series telemetry into **5-second sliding windows**, standardizes metrics via `StandardScaler`, and performs real-time unsupervised anomaly detection using an **Isolation Forest** model. Detected security anomalies are persisted to an SQLite database and broadcast asynchronously over WebSockets to a live HTML5/Tailwind/Chart.js dashboard.
 
 ---
 
 ## 📐 System Architecture
 
+```text
+┌─────────────────────────────────────────────────────────────────────────┐
+│                          LIVE NETWORK INTERFACE                         │
+│                           (Wi-Fi / Ethernet)                            │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                       RAW PACKET CAPTURE (SCAPY)                        │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    SLIDING-WINDOW FEATURE EXTRACTOR                     │
+│                      (5-Second Aggregation Engine)                      │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    MACHINE LEARNING INFERENCE ENGINE                    │
+│                  (Isolation Forest + StandardScaler)                    │
+└────────────────────────────────────┬────────────────────────────────────┘
+                                     │
+           ┌─────────────────────────┴─────────────────────────┐
+           ▼                                                   ▼
+┌─────────────────────┐                             ┌─────────────────────┐
+│ SQLite Persistence  │                             │  FastAPI WebSocket  │
+│ Database (ids_db)   │                             │  Streaming Server   │
+└─────────────────────┘                             └──────────┬──────────┘
+                                                               │
+                                                               ▼
+                                                    ┌─────────────────────┐
+                                                    │ Interactive Web     │
+                                                    │ Dashboard (Chart.js)│
+                                                    └─────────────────────┘
 
-```
 
-```
-                   +-----------------------------------+
-                   |      Live Network Interface       |
-                   |       (Wi-Fi / Ethernet)          |
-                   +-----------------+-----------------+
-                                     |
-                                     v
-                   +-----------------+-----------------+
-                   |    Raw Packet Capture (Scapy)     |
-                   +-----------------+-----------------+
-                                     |
-                                     v
-                   +-----------------+-----------------+
-                   | Sliding-Window Feature Extractor  |
-                   |   (5-Second Aggregation Engine)   |
-                   +-----------------+-----------------+
-                                     |
-                                     v
-                   +-----------------+-----------------+
-                   | Machine Learning Inference Engine |
-                   | (Isolation Forest + StandardScaler)|
-                   +--------+----------------+--------+
-                            |                |
-                            v                v
-        +-------------------+---+        +---+-------------------+
-        | SQLite Persistence    |        | FastAPI WebSocket     |
-        | Database (ids_alerts) |        | Streaming Server      |
-        +-----------------------+        +---+-------------------+
-                                             |
-                                             v
-                                 +-----------+-----------+
-                                 | Interactive Dashboard |
-                                 | (Chart.js & Tailwind) |
-                                 +-----------------------+
-
-```
-
-```
-
----
-
-## 🌟 Key Features
-
-* **Real-Time Packet Dissection:** Leverages Scapy and low-level sockets to sniff network traffic directly from active network interfaces without storing raw payloads.
-* **Sliding-Window Feature Extraction:** Aggregates packet streams into time-series feature vectors every 5 seconds (measuring packet rates, bandwidth throughput, TCP flag distributions, and IP/port dispersion).
-* **Unsupervised Anomaly Detection:** Utilizes an **Isolation Forest** model to establish baseline normal behavior and detect statistical anomalies (e.g., TCP SYN Floods, port scanning) without relying on signature databases.
-* **Zero Cloud Dependencies:** Operates entirely locally with zero external API calls or subscription costs.
-* **WebSocket Telemetry:** Asynchronously broadcasts threat events to an interactive HTML5/Tailwind/Chart.js dashboard with sub-5ms pipeline latency.
-* **Persistent Logging & REST API:** Stores historical threat records locally in an SQLite database (`ids_alerts.db`) and exposes a `/api/logs` endpoint for security auditing.
-* **Integrated Attack Simulator:** Includes a built-in test suite (`attack_simulator.py`) to generate controlled SYN floods and port scan anomalies for empirical validation.
-* **Empirical Benchmarking Suite:** Includes `evaluate_model.py` to calculate precision, recall, F1-scores, confusion matrices, and ROC curves.
-
----
-
-## 📊 Performance Benchmarks
-
-Evaluated on a ground-truth test suite of 1,000 traffic window samples (800 normal, 200 attack anomalies):
-
-| Metric | Score |
-| :--- | :--- |
-| **Accuracy** | **97.0%** |
-| **Attack Recall (Sensitivity)** | **96.0%** |
-| **Attack Precision** | **90.5%** |
-| **F1-Score** | **0.93** |
-| **ROC-AUC Score** | **0.984** |
-| **Mean Pipeline Overhead** | **~4.92 ms / window** |
-
----
-
-## 🛠️ Tech Stack & Dependencies
-
-* **Language:** Python 3.10+
-* **Packet Capture:** Scapy, Npcap (WinPcap API Mode)
-* **Machine Learning:** `scikit-learn` (IsolationForest, StandardScaler), `pandas`, `numpy`, `joblib`
-* **Backend API & Server:** FastAPI, Uvicorn, WebSockets
-* **Data Persistence:** SQLite3
-* **Visualization:** Matplotlib, Seaborn (Evaluation metrics)
-* **Frontend Dashboard:** HTML5, Tailwind CSS, Chart.js
-
----
-
-## 🚀 Installation & Quick Start
-
-### 1. Prerequisites
-* **Python 3.10+**
-* **Npcap (Windows users):** Download and install from [npcap.com](https://npcap.com/#download). Ensure **"Install Npcap in WinPcap API-compatible Mode"** is checked during installation.
-
-### 2. Clone the Repository
-```powershell
-git clone [https://github.com/shekinahomollo/network-ids-capstone.git](https://github.com/shekinahomollo/network-ids-capstone.git)
+🌟 Key Features⚡ Real-Time Packet Dissection: Direct interface sniffing using Scapy and low-level raw sockets without payload retention overhead.📊 8-Dimensional Feature Vectorization: Extracts packet rates, byte throughput, average packet sizes, TCP/UDP counts, SYN flag ratios, and target IP/port dispersion every 5 seconds.🧠 Unsupervised Threat Detection: Uses an Isolation Forest algorithm to detect zero-day DoS attacks (SYN floods) and port scans without static rule signature dependencies.🔄 Asynchronous WebSocket Telemetry: Broadcasts detection vectors and anomaly scores with sub-5ms pipeline overhead.💾 Persistent SQLite Audit Logs: Stores all event streams in ids_alerts.db with an exposed REST API (/api/logs) for security auditing.🚨 Built-in Attack Simulator: Features an interactive traffic simulator (attack_simulator.py) to execute controlled SYN floods and port probes.📈 Empirical Evaluation Suite: Includes evaluate_model.py to benchmark Precision, Recall, F1-Score, Confusion Matrices, and ROC-AUC curves.📊 Empirical Performance BenchmarksBenchmark evaluation executed across 1,000 traffic samples (800 normal, 200 attack anomalies):Evaluation MetricSystem Benchmark ScoreClassification Accuracy97.0%Attack Recall (Sensitivity)96.0%Attack Precision90.5%F1-Score0.93ROC-AUC Score0.984Mean Pipeline Processing Overhead~4.92 ms / window🛠️ Tech Stack & DependenciesLanguage: Python 3.10+Packet Dissection: Scapy, Npcap (WinPcap API Mode)Machine Learning: scikit-learn (IsolationForest, StandardScaler), pandas, numpy, joblibBackend Server: FastAPI, Uvicorn, WebSocketsDatabase: SQLite3Visualization: Matplotlib, Seaborn (Model Metrics)Frontend Web Dashboard: HTML5, Tailwind CSS, Chart.js🚀 Installation & Quick Start1. PrerequisitesPython 3.10+Npcap (Windows users): Download and install from npcap.com. Ensure "Install Npcap in WinPcap API-compatible Mode" is checked during setup.2. Clone the RepositoryPowerShellgit clone [https://github.com/shekinahomollo/network-ids-capstone.git](https://github.com/shekinahomollo/network-ids-capstone.git)
 cd network-ids-capstone
-
-```
-
-### 3. Set Up Virtual Environment & Dependencies
-
-```powershell
-# Create virtual environment
+3. Set Up Virtual Environment & DependenciesPowerShell# Create virtual environment
 python -m venv .venv
 
 # Activate environment (PowerShell)
@@ -117,101 +71,20 @@ python -m venv .venv
 
 # Install core dependencies
 pip install scapy scikit-learn pandas numpy fastapi "uvicorn[standard]" websockets joblib matplotlib seaborn
-
-```
-
----
-
-## ⚙️ Usage Guide
-
-### Step 1: Train the Baseline ML Model
-
-Train the Isolation Forest model on normal network behavior metrics:
-
-```powershell
-python train_model.py
-
-```
-
-*Outputs: `ids_isolation_forest.joblib` and `ids_scaler.joblib*`
-
-### Step 2: Initialize Database
-
-Set up the local SQLite database table:
-
-```powershell
-python database.py
-
-```
-
-*Outputs: `ids_alerts.db*`
-
-### Step 3: Launch the Streaming Server
-
-Start the FastAPI server with elevated Administrator privileges (required for raw packet socket access):
-
-```powershell
-python server.py
-
-```
-
-*Server runs at `http://127.0.0.1:8000` with WebSocket endpoint at `ws://127.0.0.1:8000/ws/alerts` and logs API at `http://127.0.0.1:8000/api/logs`.*
-
-### Step 4: Open the Live Dashboard
-
-Double-click `index.html` or open it directly in any browser (Chrome, Edge, Firefox). Ensure the top-right status badge displays **"● WebSocket Connected"**.
-
-### Step 5: Simulate Attack Traffic (Validation)
-
-Open a second PowerShell terminal, activate `.venv`, and run the attack simulator:
-
-```powershell
-python attack_simulator.py
-
-```
-
-Select **Option 1 (SYN Flood)** or **Option 2 (Port Scan)** to observe real-time anomaly spikes and alert notifications stream on the web dashboard.
-
-### Step 6: Run Empirical Model Evaluation
-
-To generate precision, recall, confusion matrix, and ROC curve plots for academic documentation:
-
-```powershell
-python evaluate_model.py
-
-```
-
-*Outputs: High-resolution plot saved as `model_evaluation_metrics.png`.*
-
----
-
-## 📂 Project Structure
-
-```text
-network-ids-capstone/
-│
-├── sniffer.py           # Standalone low-level packet capture prototype
-├── feature_extractor.py # 5-second sliding window feature engineering engine
-├── train_model.py       # Isolation Forest ML training & model exporter
-├── ids_engine.py        # Integrated real-time CLI detection engine
-├── server.py           # Asynchronous FastAPI & WebSocket streaming server
-├── database.py         # SQLite persistence and REST query handler
-├── attack_simulator.py # Controlled SYN flood & port scan attack simulator
-├── evaluate_model.py   # Model evaluation benchmark (Confusion matrix & ROC)
+⚙️ Usage WorkflowTrain Baseline ML Model:PowerShellpython train_model.py
+Initialize SQLite Database:PowerShellpython database.py
+Launch Streaming Server (Run as Administrator):PowerShellpython server.py
+Runs at http://127.0.0.1:8000 (WebSocket endpoint: ws://127.0.0.1:8000/ws/alerts).Launch Live Dashboard:Open index.html in Chrome/Edge. Verify the connection badge shows "● WebSocket Connected".Simulate Attack Traffic:In a second terminal, execute:PowerShellpython attack_simulator.py
+Select Option 1 (SYN Flood) or 2 (Port Scan) to observe live telemetry spikes.Generate Benchmark Metrics:PowerShellpython evaluate_model.py
+Outputs high-resolution plot model_evaluation_metrics.png.📂 Repository StructurePlaintextnetwork-ids-capstone/
+├── sniffer.py           # Standalone packet capture module
+├── feature_extractor.py # 5-second sliding window aggregator
+├── train_model.py       # Isolation Forest trainer & exporter
+├── ids_engine.py        # Integrated real-time CLI detector
+├── server.py           # Asynchronous FastAPI & WebSocket server
+├── database.py         # SQLite persistence & REST query engine
+├── attack_simulator.py # Controlled SYN flood & port scan suite
+├── evaluate_model.py   # Benchmark metrics & ROC curve generator
 ├── index.html          # Interactive Chart.js & Tailwind web dashboard
-├── .gitignore          # Git exclusion rules
-└── README.md           # Project documentation
-
-```
-
----
-
-## 🎓 Academic Evaluation & Future Work
-
-* **Multi-Model Benchmark:** Extending evaluation to compare Isolation Forest performance against One-Class SVM and Autoencoders.
-* **Dynamic Adaptive Windowing:** Replacing static 5-second windowing with event-driven sliding intervals to capture sub-second micro-bursts.
-* **Automated Mitigation (IPS):** Integrating active firewall rule insertion (Windows Filtering Platform / `iptables`) upon high-confidence anomaly triggers.
-* **Standard Dataset Testing:** Running accuracy benchmarks against public intrusion datasets (e.g., CICIDS2017).
-
-```
-
+└── README.md           # Documentation
+📜 LicenseDistributed under the MIT License. See LICENSE for details.

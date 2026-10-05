@@ -60,7 +60,7 @@ The system intercepts live network packets at Layer 2/3, aggregates time-series 
                                                     │ Dashboard (Chart.js)│
                                                     └─────────────────────┘
 
-
+```
 ---
 
 ## 🌟 Key Features
@@ -112,3 +112,94 @@ Benchmark evaluation executed across **1,000 traffic samples** (800 normal, 200 
 ```powershell
 git clone https://github.com/shekinahomollo/network-ids-capstone.git
 cd network-ids-capstone
+```
+### 3. Set Up Virtual Environment & Dependencies
+```powershell
+# Create virtual environment
+python -m venv .venv
+
+# Activate environment (PowerShell)
+.\.venv\Scripts\Activate.ps1
+
+# Install core dependencies
+pip install scapy scikit-learn pandas numpy fastapi "uvicorn[standard]" websockets joblib matplotlib seaborn
+```
+## ⚙️ Usage Workflow
+
+1. **Train Baseline ML Model:**
+   ```powershell
+   python train_model.py
+   ```
+## ⚙️ Usage Guide
+### Step 1: Train the Baseline ML Model
+Train the Isolation Forest model on normal network behavior metrics:
+
+   ```powershell
+python train_model.py
+   ```
+Outputs: ids_isolation_forest.joblib and ids_scaler.joblib
+
+### Step 2: Initialize Database
+Set up the local SQLite database table:
+
+   ```powershell
+python database.py
+   ```
+Outputs: ids_alerts.db
+
+### Step 3: Launch the Streaming Server
+Start the FastAPI server with elevated Administrator privileges (required for raw packet socket access):
+
+   ```powershell
+python server.py
+   ```
+Server runs at http://127.0.0.1:8000 with WebSocket endpoint at ws://127.0.0.1:8000/ws/alerts and logs API at http://127.0.0.1:8000/api/logs.
+
+### Step 4: Open the Live Dashboard
+Double-click index.html or open it directly in any browser (Chrome, Edge, Firefox). Ensure the top-right status badge displays "● WebSocket Connected".
+
+### Step 5: Simulate Attack Traffic (Validation)
+Open a second PowerShell terminal, activate .venv, and run the attack simulator:
+
+   ```powershell
+python attack_simulator.py
+   ```
+Select Option 1 (SYN Flood) or Option 2 (Port Scan) to observe real-time anomaly spikes and alert notifications stream on the web dashboard.
+
+### Step 6: Run Empirical Model Evaluation
+To generate precision, recall, confusion matrix, and ROC curve plots for academic documentation:
+
+   ```powershell
+python evaluate_model.py
+   ```
+Outputs: High-resolution plot saved as model_evaluation_metrics.png.
+
+## 📂 Project Structure
+
+```text
+network-ids-capstone/
+│
+├── sniffer.py           # Standalone low-level packet capture prototype
+├── feature_extractor.py # 5-second sliding window feature engineering engine
+├── train_model.py       # Isolation Forest ML training & model exporter
+├── ids_engine.py        # Integrated real-time CLI detection engine
+├── server.py           # Asynchronous FastAPI & WebSocket streaming server
+├── database.py         # SQLite persistence and REST query handler
+├── attack_simulator.py # Controlled SYN flood & port scan attack simulator
+├── evaluate_model.py   # Model evaluation benchmark (Confusion matrix & ROC)
+├── index.html          # Interactive Chart.js & Tailwind web dashboard
+├── .gitignore          # Git exclusion rules
+└── README.md           # Project documentation
+
+```
+
+## 🎓 Academic Evaluation & Future Work
+
+* **Multi-Model Benchmark:** Extending evaluation to compare Isolation Forest performance against One-Class SVM and Autoencoders.
+* **Dynamic Adaptive Windowing:** Replacing static 5-second windowing with event-driven sliding intervals to capture sub-second micro-bursts.
+* **Automated Mitigation (IPS):** Integrating active firewall rule insertion (Windows Filtering Platform / `iptables`) upon high-confidence anomaly triggers.
+* **Standard Dataset Testing:** Running accuracy benchmarks against public intrusion datasets (e.g., CICIDS2017).
+
+  
+## 📜 License
+Distributed under the MIT License. See LICENSE for details.

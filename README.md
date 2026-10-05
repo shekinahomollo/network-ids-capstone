@@ -61,30 +61,54 @@ The system intercepts live network packets at Layer 2/3, aggregates time-series 
                                                     └─────────────────────┘
 
 
-🌟 Key Features⚡ Real-Time Packet Dissection: Direct interface sniffing using Scapy and low-level raw sockets without payload retention overhead.📊 8-Dimensional Feature Vectorization: Extracts packet rates, byte throughput, average packet sizes, TCP/UDP counts, SYN flag ratios, and target IP/port dispersion every 5 seconds.🧠 Unsupervised Threat Detection: Uses an Isolation Forest algorithm to detect zero-day DoS attacks (SYN floods) and port scans without static rule signature dependencies.🔄 Asynchronous WebSocket Telemetry: Broadcasts detection vectors and anomaly scores with sub-5ms pipeline overhead.💾 Persistent SQLite Audit Logs: Stores all event streams in ids_alerts.db with an exposed REST API (/api/logs) for security auditing.🚨 Built-in Attack Simulator: Features an interactive traffic simulator (attack_simulator.py) to execute controlled SYN floods and port probes.📈 Empirical Evaluation Suite: Includes evaluate_model.py to benchmark Precision, Recall, F1-Score, Confusion Matrices, and ROC-AUC curves.📊 Empirical Performance BenchmarksBenchmark evaluation executed across 1,000 traffic samples (800 normal, 200 attack anomalies):Evaluation MetricSystem Benchmark ScoreClassification Accuracy97.0%Attack Recall (Sensitivity)96.0%Attack Precision90.5%F1-Score0.93ROC-AUC Score0.984Mean Pipeline Processing Overhead~4.92 ms / window🛠️ Tech Stack & DependenciesLanguage: Python 3.10+Packet Dissection: Scapy, Npcap (WinPcap API Mode)Machine Learning: scikit-learn (IsolationForest, StandardScaler), pandas, numpy, joblibBackend Server: FastAPI, Uvicorn, WebSocketsDatabase: SQLite3Visualization: Matplotlib, Seaborn (Model Metrics)Frontend Web Dashboard: HTML5, Tailwind CSS, Chart.js🚀 Installation & Quick Start1. PrerequisitesPython 3.10+Npcap (Windows users): Download and install from npcap.com. Ensure "Install Npcap in WinPcap API-compatible Mode" is checked during setup.2. Clone the RepositoryPowerShellgit clone [https://github.com/shekinahomollo/network-ids-capstone.git](https://github.com/shekinahomollo/network-ids-capstone.git)
+---
+
+## 🌟 Key Features
+
+* **⚡ Real-Time Packet Dissection:** Direct interface sniffing using Scapy and low-level raw sockets without payload retention overhead.
+* **📊 8-Dimensional Feature Vectorization:** Extracts packet rates, byte throughput, average packet sizes, TCP/UDP counts, SYN flag ratios, and target IP/port dispersion every 5 seconds.
+* **🧠 Unsupervised Threat Detection:** Uses an Isolation Forest algorithm to detect zero-day DoS attacks (SYN floods) and port scans without static rule signature dependencies.
+* **🔄 Asynchronous WebSocket Telemetry:** Broadcasts detection vectors and anomaly scores with **sub-5ms pipeline overhead**.
+* **💾 Persistent SQLite Audit Logs:** Stores all event streams in `ids_alerts.db` with an exposed REST API (`/api/logs`) for security auditing.
+* **🚨 Built-in Attack Simulator:** Features an interactive traffic simulator (`attack_simulator.py`) to execute controlled SYN floods and port probes.
+* **📈 Empirical Evaluation Suite:** Includes `evaluate_model.py` to benchmark Precision, Recall, F1-Score, Confusion Matrices, and ROC-AUC curves.
+
+---
+
+## 📊 Empirical Performance Benchmarks
+
+Benchmark evaluation executed across **1,000 traffic samples** (800 normal, 200 attack anomalies):
+
+| Evaluation Metric | System Benchmark Score |
+| :--- | :--- |
+| **Classification Accuracy** | **97.0%** |
+| **Attack Recall (Sensitivity)** | **96.0%** |
+| **Attack Precision** | **90.5%** |
+| **F1-Score** | **0.93** |
+| **ROC-AUC Score** | **0.984** |
+| **Mean Pipeline Processing Overhead** | **~4.92 ms / window** |
+
+---
+
+## 🛠️ Tech Stack & Dependencies
+
+* **Language:** Python 3.10+
+* **Packet Dissection:** Scapy, Npcap (WinPcap API Mode)
+* **Machine Learning:** `scikit-learn` (IsolationForest, StandardScaler), `pandas`, `numpy`, `joblib`
+* **Backend Server:** FastAPI, Uvicorn, WebSockets
+* **Database:** SQLite3
+* **Visualization:** Matplotlib, Seaborn (Model Metrics)
+* **Frontend Web Dashboard:** HTML5, Tailwind CSS, Chart.js
+
+---
+
+## 🚀 Installation & Quick Start
+
+### 1. Prerequisites
+* **Python 3.10+**
+* **Npcap (Windows users):** Download and install from [npcap.com](https://npcap.com/#download). Ensure **"Install Npcap in WinPcap API-compatible Mode"** is checked during setup.
+
+### 2. Clone the Repository
+```powershell
+git clone https://github.com/shekinahomollo/network-ids-capstone.git
 cd network-ids-capstone
-3. Set Up Virtual Environment & DependenciesPowerShell# Create virtual environment
-python -m venv .venv
-
-# Activate environment (PowerShell)
-.\.venv\Scripts\Activate.ps1
-
-# Install core dependencies
-pip install scapy scikit-learn pandas numpy fastapi "uvicorn[standard]" websockets joblib matplotlib seaborn
-⚙️ Usage WorkflowTrain Baseline ML Model:PowerShellpython train_model.py
-Initialize SQLite Database:PowerShellpython database.py
-Launch Streaming Server (Run as Administrator):PowerShellpython server.py
-Runs at http://127.0.0.1:8000 (WebSocket endpoint: ws://127.0.0.1:8000/ws/alerts).Launch Live Dashboard:Open index.html in Chrome/Edge. Verify the connection badge shows "● WebSocket Connected".Simulate Attack Traffic:In a second terminal, execute:PowerShellpython attack_simulator.py
-Select Option 1 (SYN Flood) or 2 (Port Scan) to observe live telemetry spikes.Generate Benchmark Metrics:PowerShellpython evaluate_model.py
-Outputs high-resolution plot model_evaluation_metrics.png.📂 Repository StructurePlaintextnetwork-ids-capstone/
-├── sniffer.py           # Standalone packet capture module
-├── feature_extractor.py # 5-second sliding window aggregator
-├── train_model.py       # Isolation Forest trainer & exporter
-├── ids_engine.py        # Integrated real-time CLI detector
-├── server.py           # Asynchronous FastAPI & WebSocket server
-├── database.py         # SQLite persistence & REST query engine
-├── attack_simulator.py # Controlled SYN flood & port scan suite
-├── evaluate_model.py   # Benchmark metrics & ROC curve generator
-├── index.html          # Interactive Chart.js & Tailwind web dashboard
-└── README.md           # Documentation
-📜 LicenseDistributed under the MIT License. See LICENSE for details.

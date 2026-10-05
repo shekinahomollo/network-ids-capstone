@@ -10,11 +10,13 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from scapy.all import sniff, IP, TCP, UDP, get_working_if, IFACES
 
+# Import database module
+from database import init_db, log_alert, get_recent_alerts
+
 MODEL_FILE = "ids_isolation_forest.joblib"
 SCALER_FILE = "ids_scaler.joblib"
 WINDOW_SIZE_SECONDS = 5
 
-# Global ML objects
 model = None
 scaler = None
 
@@ -113,10 +115,18 @@ class AsyncIDSEngine:
         scaled_features = scaler.transform(raw_features)
         prediction = model.predict(scaled_features)[0]
         anomaly_score = float(model.decision_function(scaled_features)[0])
+        status = "ANOMALY" if prediction == -1 else "NORMAL"
 
+        # 1. Log alert into SQLite database
+        try:
+            log_alert(status, anomaly_score, pkt_rate, byte_rate, syn_ratio, unique_dst_ips)
+        except Exception as e:
+            print(f"[!] Database logging error: {e}")
+
+        # 2. Prepare WebSocket payload
         payload = {
             "timestamp": time.strftime("%H:%M:%S"),
-            "status": "ANOMALY" if prediction == -1 else "NORMAL",
+            "status": status,
             "anomaly_score": round(anomaly_score, 4),
             "metrics": {
                 "pkt_rate": pkt_rate,
@@ -130,11 +140,13 @@ class AsyncIDSEngine:
             }
         }
 
+        # 3. Broadcast to all active dashboard connections
         asyncio.run_coroutine_threadsafe(manager.broadcast(payload), self.loop)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Startup logic
+    # Initialize SQLite table on startup
+    init_db()
     load_ml_artifacts()
     loop = asyncio.get_running_loop()
 
@@ -151,7 +163,6 @@ async def lifespan(app: FastAPI):
     loop.run_in_executor(None, lambda: sniff(iface=active_iface, prn=engine.process_packet, store=False))
     print(f"[*] Background packet sniffer started on: {active_iface.name}")
     yield
-    # Shutdown logic
     print("[*] Server shutting down.")
 
 app = FastAPI(title="Network IDS Streaming API", lifespan=lifespan)
@@ -167,6 +178,12 @@ app.add_middleware(
 @app.get("/")
 def health_check():
     return {"status": "online", "service": "Capstone IDS Streaming Server"}
+
+@app.get("/api/logs")
+def fetch_logs(limit: int = 50):
+    """REST API endpoint to retrieve historical alert logs from SQLite."""
+    logs = get_recent_alerts(limit=limit)
+    return {"count": len(logs), "logs": logs}
 
 @app.websocket("/ws/alerts")
 async def websocket_endpoint(websocket: WebSocket):
